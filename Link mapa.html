@@ -1,0 +1,240 @@
+
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8"/>
+        <title>Kepler.gl embedded map</title>
+
+        <!--Uber Font-->
+        <link rel="stylesheet" href="https://d1a3f4spazzrp4.cloudfront.net/kepler.gl/uber-fonts/4.0.0/superfine.css">
+
+        <!--Kepler css-->
+        <link href="https://unpkg.com/kepler.gl@3.1.6/umd/keplergl.min.css" rel="stylesheet">
+
+        <!--MapBox css-->
+        <link href="https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.1/mapbox-gl.css" rel="stylesheet">
+        <link href="https://unpkg.com/maplibre-gl@^3/dist/maplibre-gl.css" rel="stylesheet">
+
+        <!-— facebook open graph tags -->
+        <meta property="og:url" content="http://kepler.gl/" />
+        <meta property="og:title" content="Large-scale WebGL-powered Geospatial Data Visualization Tool" />
+        <meta property="og:description" content="Kepler.gl is a powerful web-based geospatial data analysis tool. Built on a high performance rendering engine and designed for large-scale data sets." />
+        <meta property="og:site_name" content="kepler.gl" />
+        <meta property="og:image" content="https://d1a3f4spazzrp4.cloudfront.net/kepler.gl/kepler.gl-meta-tag.png" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="800" />
+        <meta property="og:image:height" content="800" />
+
+        <!-— twitter card tags -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:site" content="@openjsf">
+        <meta name="twitter:creator" content="@openjsf">
+        <meta name="twitter:title" content="Large-scale WebGL-powered Geospatial Data Visualization Tool">
+        <meta name="twitter:description" content="Kepler.gl is a powerful web-based geospatial data analysis tool. Built on a high performance rendering engine and designed for large-scale data sets.">
+        <meta name="twitter:image" content="https://d1a3f4spazzrp4.cloudfront.net/kepler.gl/kepler.gl-meta-tag.png" />
+
+        <!-- Load React/Redux -->
+        <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+        <script src="https://unpkg.com/redux@4.2.1/dist/redux.js" crossorigin></script>
+        <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.min.js" crossorigin></script>
+        <script src="https://unpkg.com/styled-components@6.1.8/dist/styled-components.min.js" crossorigin></script>
+
+        <!-- Load Kepler.gl -->
+        <script src="https://unpkg.com/kepler.gl@3.1.6/umd/keplergl.min.js" crossorigin></script>
+
+        <style type="text/css">
+          body {margin: 0; padding: 0; overflow: hidden;}
+        </style>
+
+        <!--MapBox token-->
+        <script>
+          /**
+           * Provide your MapBox Token
+           **/
+          const MAPBOX_TOKEN = 'pk.eyJ1IjoidWNmLW1hcGJveCIsImEiOiJjbDBiYzlveHgwdnF0M2NtZzUzZWZuNWZ4In0.l9J8ptz3MKwaU9I4PtCcig';
+          const WARNING_MESSAGE = 'Please Provide a Mapbox Token in order to use Kepler.gl. Edit this file and fill out MAPBOX_TOKEN with your access key';
+        </script>
+
+        <!-- GA: Delete this as you wish, However to pat ourselves on the back, we only track anonymous pageview to understand how many people are using kepler.gl. -->
+        <script>
+          (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+          })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+          ga('create', 'UA-64694404-19', {
+            'storage': 'none',
+            'clientId': localStorage.getItem('ga:clientId')
+          });
+          ga(function(tracker) {
+              localStorage.setItem('ga:clientId', tracker.get('clientId'));
+          });
+          ga('set', 'checkProtocolTask', null); // Disable file protocol checking.
+          ga('set', 'checkStorageTask', null); // Disable cookie storage checking.
+          ga('set', 'historyImportTask', null); // Disable history checking (requires reading from cookies).
+          ga('set', 'page', 'keplergl-html');
+          ga('send', 'pageview');
+        </script>
+      </head>
+      <body>
+        <!-- We will put our React component inside this div. -->
+        <div id="app">
+          <!-- Kepler.gl map will be placed here-->
+        </div>
+
+        <!-- Load our React component. -->
+        <script>
+          /* Validate Mapbox Token */
+          if ((MAPBOX_TOKEN || '') === '' || MAPBOX_TOKEN === 'PROVIDE_MAPBOX_TOKEN') {
+            alert(WARNING_MESSAGE);
+          }
+
+          /** STORE **/
+          const reducers = (function createReducers(redux, keplerGl) {
+            return redux.combineReducers({
+              // mount keplerGl reducer
+              keplerGl: keplerGl.keplerGlReducer.initialState({
+                uiState: {
+                  readOnly: true,
+                  currentModal: null
+                }
+              })
+            });
+          }(Redux, KeplerGl));
+
+          const middleWares = (function createMiddlewares(keplerGl) {
+            return keplerGl.enhanceReduxMiddleware([
+              // Add other middlewares here
+            ]);
+          }(KeplerGl));
+
+          const enhancers = (function craeteEnhancers(redux, middles) {
+            return redux.applyMiddleware(...middles);
+          }(Redux, middleWares));
+
+          const store = (function createStore(redux, enhancers) {
+            const initialState = {};
+
+            return redux.createStore(
+              reducers,
+              initialState,
+              redux.compose(enhancers)
+            );
+          }(Redux, enhancers));
+          /** END STORE **/
+
+          /** COMPONENTS **/
+          var KeplerElement = (function makeKeplerElement(react, keplerGl, mapboxToken) {
+            var LogoSvg = function LogoSvg() {
+              return react.createElement(
+                "div",
+                { className: "logo-container", style: {position: 'fixed', zIndex: 10000, padding: '4px'} },
+                  react.createElement(
+                    "svg",
+                    {
+                      className: "kepler_gl__logo",
+                      width: "107px",
+                      height: "21px",
+                      viewBox: "0 0 124 24"
+                    },
+                    react.createElement(
+                      "g",
+                      { transform: "translate(13.500000, 13.500000) rotate(45.000000) translate(-13.500000, -13.500000) translate(4.000000, 4.000000)" },
+                      react.createElement("rect", { x: "0", y: "6", transform: "matrix(2.535181e-06 1 -1 2.535181e-06 18.1107 6.0369)", fill: "#535C6C", width: "12.1", height: "12.1" }),
+                      react.createElement("rect", { x: "6", y: "0", transform: "matrix(2.535182e-06 1 -1 2.535182e-06 18.1107 -6.0369)", fill:"#1FBAD6", width: "12.1", height: "12.1" })
+                    ),
+                    react.createElement(
+                      "g",
+                      {},
+                      react.createElement("path", { fill:"#1FBAD6", d: "M39,8.7h2.2l-2.8,4.2l2.9,5.1H39l-2.4-4.2h-1.3V18h-2V5l2-0.1v7.3h1.3L39,8.7z" }),
+                      react.createElement("path", { fill:"#1FBAD6", d: "M42.4,13.3c0-1.5,0.4-2.7,1.1-3.5s1.8-1.2,3.1-1.2c1.3,0,2.2,0.4,2.8,1.1c0.6,0.7,0.9,1.8,0.9,3.3 c0,0.4,0,0.8,0,1.1h-5.8c0,1.6,0.8,2.4,2.4,2.4c1,0,2-0.2,2.9-0.6l0.2,1.7c-0.4,0.2-0.9,0.4-1.4,0.5s-1.1,0.2-1.7,0.2 c-1.5,0-2.6-0.4-3.3-1.2C42.8,16.1,42.4,14.9,42.4,13.3z M46.6,10.1c-0.7,0-1.2,0.2-1.5,0.5c-0.4,0.4-0.6,0.9-0.6,1.7h4 c0-0.8-0.2-1.4-0.5-1.7S47.2,10.1,46.6,10.1z" }),
+                      react.createElement("path", { fill:"#1FBAD6", d: "M57.1,18.2c-1,0-1.8-0.3-2.3-0.9l0,0l0,1.3v2.5h-2V8.7h1.5l0.3,0.9h0c0.3-0.3,0.7-0.6,1.2-0.7 c0.4-0.2,0.9-0.3,1.4-0.3c1.2,0,2.1,0.4,2.7,1.1c0.6,0.7,0.9,2,0.9,3.7c0,1.6-0.3,2.8-1,3.7C59.2,17.8,58.3,18.2,57.1,18.2z M56.7,10.3c-0.4,0-0.8,0.1-1.1,0.2c-0.3,0.2-0.6,0.4-0.8,0.7v4.3c0.2,0.3,0.4,0.5,0.7,0.7c0.3,0.2,0.7,0.3,1.1,0.3 c0.7,0,1.2-0.2,1.6-0.7c0.4-0.5,0.5-1.3,0.5-2.5c0-0.8-0.1-1.4-0.2-1.8s-0.4-0.7-0.7-0.9C57.6,10.4,57.2,10.3,56.7,10.3z" }),
+                      react.createElement("path", { fill:"#1FBAD6", d: "M63.2,16V5l2-0.1v10.8c0,0.3,0.1,0.5,0.2,0.6c0.1,0.1,0.3,0.2,0.6,0.2c0.3,0,0.6,0,0.9-0.1V18 c-0.4,0.1-1,0.2-1.6,0.2c-0.8,0-1.3-0.2-1.7-0.5S63.2,16.8,63.2,16z" }),
+                      react.createElement("path", { fill:"#1FBAD6", d: "M68.2,13.3c0-1.5,0.4-2.7,1.1-3.5c0.7-0.8,1.8-1.2,3.1-1.2c1.3,0,2.2,0.4,2.8,1.1c0.6,0.7,0.9,1.8,0.9,3.3 c0,0.4,0,0.8,0,1.1h-5.8c0,1.6,0.8,2.4,2.4,2.4c1,0,2-0.2,2.9-0.6l0.2,1.7c-0.4,0.2-0.9,0.4-1.4,0.5s-1.1,0.2-1.7,0.2 c-1.5,0-2.6-0.4-3.3-1.2C68.6,16.1,68.2,14.9,68.2,13.3z M72.4,10.1c-0.7,0-1.2,0.2-1.5,0.5c-0.4,0.4-0.6,0.9-0.6,1.7h4 c0-0.8-0.2-1.4-0.5-1.7S73,10.1,72.4,10.1z" }),
+                      react.createElement("path", { fill:"#1FBAD6", d: "M80.2,8.7l0.1,1.7h0c0.3-0.6,0.7-1.1,1.1-1.4c0.4-0.3,1-0.5,1.6-0.5c0.4,0,0.7,0,1,0.1l-0.1,2 c-0.3-0.1-0.7-0.2-1-0.2c-0.7,0-1.3,0.3-1.7,0.8c-0.4,0.5-0.7,1.2-0.7,2.1V18h-2V8.7H80.2z" }),
+                      react.createElement("path", { fill:"#1FBAD6", d: "M83.8,17c0-0.8,0.4-1.2,1.2-1.2c0.8,0,1.2,0.4,1.2,1.2c0,0.8-0.4,1.1-1.2,1.1C84.2,18.2,83.8,17.8,83.8,17z" }),
+                      react.createElement("path", { fill:"#1FBAD6", d: "M88.5,18.7c0-0.8,0.4-1.4,1.2-1.8c-0.6-0.3-0.9-0.8-0.9-1.5c0-0.7,0.4-1.2,1.1-1.6c-0.3-0.3-0.6-0.6-0.7-0.9 c-0.2-0.4-0.2-0.8-0.2-1.3c0-1,0.3-1.8,0.9-2.3c0.6-0.5,1.6-0.8,2.8-0.8c0.5,0,1,0,1.4,0.1c0.4,0.1,0.8,0.2,1.1,0.4l2.4-0.2v1.5 h-1.5c0.2,0.4,0.2,0.8,0.2,1.3c0,1-0.3,1.7-0.9,2.2s-1.5,0.8-2.7,0.8c-0.7,0-1.2-0.1-1.6-0.2c-0.1,0.1-0.2,0.2-0.3,0.3 c-0.1,0.1-0.1,0.2-0.1,0.4c0,0.2,0.1,0.3,0.2,0.4c0.1,0.1,0.3,0.2,0.6,0.2l2.7,0.2c1,0.1,1.7,0.3,2.2,0.6c0.5,0.3,0.8,0.9,0.8,1.7 c0,0.6-0.2,1.1-0.5,1.5c-0.4,0.4-0.9,0.8-1.5,1c-0.7,0.2-1.5,0.4-2.4,0.4c-1.3,0-2.3-0.2-3-0.6C88.8,20.1,88.5,19.5,88.5,18.7z M95.1,18.4c0-0.3-0.1-0.5-0.3-0.7s-0.6-0.2-1.1-0.3l-2.7-0.3c-0.2,0.1-0.4,0.3-0.5,0.5c-0.1,0.2-0.2,0.4-0.2,0.6 c0,0.4,0.2,0.8,0.5,1c0.4,0.2,1,0.3,1.8,0.3C94.2,19.5,95.1,19.2,95.1,18.4z M94.3,11.5c0-0.6-0.1-1-0.4-1.2 c-0.3-0.2-0.7-0.3-1.3-0.3c-0.7,0-1.1,0.1-1.4,0.3c-0.3,0.2-0.4,0.6-0.4,1.2s0.1,1,0.4,1.2c0.3,0.2,0.7,0.3,1.4,0.3 c0.6,0,1.1-0.1,1.3-0.4S94.3,12,94.3,11.5z" }),
+                      react.createElement("path", { fill:"#1FBAD6", d: "M99.4,16V5l2-0.1v10.8c0,0.3,0.1,0.5,0.2,0.6c0.1,0.1,0.3,0.2,0.6,0.2c0.3,0,0.6,0,0.9-0.1V18 c-0.4,0.1-1,0.2-1.6,0.2c-0.8,0-1.3-0.2-1.7-0.5S99.4,16.8,99.4,16z" })
+                    )
+                  )
+                );
+              };
+
+            return function App() {
+              var rootElm = react.useRef(null);
+              var _useState = react.useState({
+                width: window.innerWidth,
+                height: window.innerHeight
+              });
+              var windowDimension = _useState[0];
+              var setDimension = _useState[1];
+              react.useEffect(function sideEffect(){
+                function handleResize() {
+                  setDimension({width: window.innerWidth, height: window.innerHeight});
+                };
+                window.addEventListener('resize', handleResize);
+                return function() {window.removeEventListener('resize', handleResize);};
+              }, []);
+              return react.createElement(
+                'div',
+                {style: {position: 'absolute', left: 0, width: '100vw', height: '100vh'}},
+                LogoSvg(),
+                react.createElement(keplerGl.KeplerGl, {
+                  mapboxApiAccessToken: mapboxToken,
+                  id: "map",
+                  width: windowDimension.width,
+                  height: windowDimension.height
+                })
+              )
+            }
+          }(React, KeplerGl, MAPBOX_TOKEN));
+
+          const app = (function createReactReduxProvider(react, reactRedux, KeplerElement) {
+            return react.createElement(
+              reactRedux.Provider,
+              {store},
+              react.createElement(KeplerElement, null)
+            )
+          }(React, ReactRedux, KeplerElement));
+          /** END COMPONENTS **/
+
+          /** Render **/
+          (function render(react, reactDOM, app) {
+            const container = document.getElementById('app');
+            const root = reactDOM.createRoot(container);
+            root.render(app);
+          }(React, ReactDOM, app));
+        </script>
+        <!-- The next script will show how to interact directly with Kepler map store -->
+        <script>
+          /**
+           * Customize map.
+           * In the following section you can use the store object to dispatch Kepler.gl actions
+           * to add new data and customize behavior
+           */
+          (function customize(keplerGl, store) {
+            const datasets = [{"version":"v1","data":{"id":"-2drntl","label":"Conexiones_Papas_Animado.csv","color":[143,47,191],"allData":[["San Pedro",32.791,35.541,"San Lino",43.4,10.85,"I","I",1,20],["San Lino",43.4,10.85,"San Anacleto (Cletus)",41.9,12.5,"I","I",2,30],["San Anacleto (Cletus)",41.9,12.5,"San Clemente I",41.9,12.5,"I","I",3,40],["San Clemente I",41.9,12.5,"San Evaristo",31.7054,35.2024,"I","I",4,50],["San Evaristo",31.7054,35.2024,"San Alejandro I",41.9,12.5,"I","II",5,60],["San Alejandro I",41.9,12.5,"San Sixto I",41.9,12.5,"II","II",6,70],["San Sixto I",41.9,12.5,"San Telesforo",39.0742,21.8243,"II","II",7,80],["San Telesforo",39.0742,21.8243,"San Higinio",37.9838,23.7275,"II","II",8,90],["San Higinio",37.9838,23.7275,"San P��o I",45.7683,13.3673,"II","II",9,null],["San P��o I",45.7683,13.3673,"San Aniceto",34.73,36.71,"II","II",10,null],["San Aniceto",34.73,36.71,"San Sotero",41.355,13.418,"II","II",11,120],["San Sotero",41.355,13.418,"San Eleuterio",38.9637,20.7651,"II","II",12,130],["San Eleuterio",38.9637,20.7651,"San V��ctor I",36.8065,10.1815,"II","II",13,null],["San V��ctor I",36.8065,10.1815,"San Ceferino",41.9,12.5,"II","III",14,null],["San Ceferino",41.9,12.5,"San Calixto I",41.9,12.5,"III","III",15,160],["San Calixto I",41.9,12.5,"San Urbano I",41.9,12.5,"III","III",16,170],["San Urbano I",41.9,12.5,"San Ponciano",41.9,12.5,"III","III",17,180],["San Ponciano",41.9,12.5,"San Antero",39.0742,21.8243,"III","III",18,190],["San Antero",39.0742,21.8243,"San Fabi��n",41.9,12.5,"III","III",19,null],["San Fabi��n",41.9,12.5,"San Cornelio",41.9,12.5,"III","III",20,null],["San Cornelio",41.9,12.5,"San Lucio I",41.9,12.5,"III","III",21,220],["San Lucio I",41.9,12.5,"San Esteban I",41.9,12.5,"III","III",22,230],["San Esteban I",41.9,12.5,"San Sixto II",39.0742,21.8243,"III","III",23,240],["San Sixto II",39.0742,21.8243,"San Dionisio",39.0742,21.8243,"III","III",24,250],["San Dionisio",39.0742,21.8243,"San F��lix I",41.9,12.5,"III","III",25,null],["San F��lix I",41.9,12.5,"San Eutiquiano",44.0667,10.0167,"III","III",26,null],["San Eutiquiano",44.0667,10.0167,"San Cayo",43.5081,16.4402,"III","III",27,280],["San Cayo",43.5081,16.4402,"San Marcelino",41.9,12.5,"III","III",28,290],["San Marcelino",41.9,12.5,"San Marcelo I",41.9,12.5,"III","IV",29,300],["San Marcelo I",41.9,12.5,"San Eusebio",39.0742,21.8243,"IV","IV",30,310],["San Eusebio",39.0742,21.8243,"San Melqu��ades",36.8065,10.1815,"IV","IV",31,null],["San Melqu��ades",36.8065,10.1815,"San Silvestre I",41.9,12.5,"IV","IV",32,null],["San Silvestre I",41.9,12.5,"San Marcos",41.9,12.5,"IV","IV",33,340],["San Marcos",41.9,12.5,"San Julio I",41.9,12.5,"IV","IV",34,350],["San Julio I",41.9,12.5,"Liberio",41.9,12.5,"IV","IV",35,360],["Liberio",41.9,12.5,"San D��maso I",40.066,-7.15,"IV","IV",36,null],["San D��maso I",40.066,-7.15,"San Siricio",41.9,12.5,"IV","IV",37,null],["San Siricio",41.9,12.5,"Le��n III",41.9,12.5,"IV","IX",38,null],["Le��n III",41.9,12.5,"Esteban IV",41.9,12.5,"IX","IX",39,null],["Esteban IV",41.9,12.5,"Pascual I",41.9,12.5,"IX","IX",40,410],["Pascual I",41.9,12.5,"Eugenio II",41.9,12.5,"IX","IX",41,420],["Eugenio II",41.9,12.5,"Valent��n",41.9,12.5,"IX","IX",42,null],["Valent��n",41.9,12.5,"Gregorio IV",41.9,12.5,"IX","IX",43,null],["Gregorio IV",41.9,12.5,"Sergio II",41.9,12.5,"IX","IX",44,450],["Sergio II",41.9,12.5,"Le��n IV",41.9,12.5,"IX","IX",45,null],["Le��n IV",41.9,12.5,"Benedicto III",41.9,12.5,"IX","IX",46,null],["Benedicto III",41.9,12.5,"Nicol��s I",41.9,12.5,"IX","IX",47,null],["Nicol��s I",41.9,12.5,"Adriano II",41.9,12.5,"IX","IX",48,null],["Adriano II",41.9,12.5,"Juan VIII",41.9,12.5,"IX","IX",49,500],["Juan VIII",41.9,12.5,"Marino I",42.35,12.43,"IX","IX",50,510],["Marino I",42.35,12.43,"Adriano III",41.9,12.5,"IX","IX",51,520],["Adriano III",41.9,12.5,"Esteban V",41.9,12.5,"IX","IX",52,530],["Esteban V",41.9,12.5,"Formoso",41.75,12.29,"IX","IX",53,540],["Formoso",41.75,12.29,"Bonifacio VI",41.9,12.5,"IX","IX",54,550],["Bonifacio VI",41.9,12.5,"Esteban VI",41.9,12.5,"IX","IX",55,560],["Esteban VI",41.9,12.5,"San Anastasio I",41.9,12.5,"IX","V",56,570],["San Anastasio I",41.9,12.5,"San Inocencio I",44.7,8.03,"V","V",57,580],["San Inocencio I",44.7,8.03,"San Z��simo",39.0742,21.8243,"V","V",58,null],["San Z��simo",39.0742,21.8243,"San Bonifacio I",41.9,12.5,"V","V",59,null],["San Bonifacio I",41.9,12.5,"San Celestino I",41.9,12.5,"V","V",60,610],["San Celestino I",41.9,12.5,"San Sixto III",41.9,12.5,"V","V",61,620],["San Sixto III",41.9,12.5,"San Le��n I Magno",43.47,11,"V","V",62,null],["San Le��n I Magno",43.47,11,"San Hilario",40.12,9.01,"V","V",63,null],["San Hilario",40.12,9.01,"San Simplicio",41.96,12.8,"V","V",64,650],["San Simplicio",41.96,12.8,"San F��lix III",41.9,12.5,"V","V",65,null],["San F��lix III",41.9,12.5,"San Gelasio I",36.8065,10.1815,"V","V",66,null],["San Gelasio I",36.8065,10.1815,"Anastasio II",41.9,12.5,"V","V",67,680],["Anastasio II",41.9,12.5,"San S��maco",40.12,9.01,"V","V",68,null],["San S��maco",40.12,9.01,"Hormisdas",41.6412,13.3514,"V","VI",69,null],["Hormisdas",41.6412,13.3514,"Juan I",42.992,10.511,"VI","VI",70,710],["Juan I",42.992,10.511,"F��lix IV",41.4333,14.4167,"VI","VI",71,null],["F��lix IV",41.4333,14.4167,"Bonifacio II",41.9,12.5,"VI","VI",72,null],["Bonifacio II",41.9,12.5,"Juan II",41.9,12.5,"VI","VI",73,740],["Juan II",41.9,12.5,"Agapito I",41.9,12.5,"VI","VI",74,750],["Agapito I",41.9,12.5,"Silverio",41.6412,13.3514,"VI","VI",75,760],["Silverio",41.6412,13.3514,"Vigilio",41.9,12.5,"VI","VI",76,770],["Vigilio",41.9,12.5,"Pelagio I",41.9,12.5,"VI","VI",77,780],["Pelagio I",41.9,12.5,"Juan III",41.9,12.5,"VI","VI",78,790],["Juan III",41.9,12.5,"Benedicto I",41.9,12.5,"VI","VI",79,800],["Benedicto I",41.9,12.5,"Pelagio II",41.9,12.5,"VI","VI",80,810],["Pelagio II",41.9,12.5,"San Gregorio I Magno",41.9,12.5,"VI","VI",81,820],["San Gregorio I Magno",41.9,12.5,"Sabiniano",42.278,12.047,"VI","VII",82,830],["Sabiniano",42.278,12.047,"Bonifacio III",41.9,12.5,"VII","VII",83,840],["Bonifacio III",41.9,12.5,"San Bonifacio IV",41.916,13.55,"VII","VII",84,850],["San Bonifacio IV",41.916,13.55,"San Adeodato I",41.9,12.5,"VII","VII",85,860],["San Adeodato I",41.9,12.5,"Bonifacio V",40.85,14.27,"VII","VII",86,870],["Bonifacio V",40.85,14.27,"Honorio I",41.1,14.2,"VII","VII",87,880],["Honorio I",41.1,14.2,"Severino",41.9,12.5,"VII","VII",88,890],["Severino",41.9,12.5,"Juan IV",43.5,16.4,"VII","VII",89,900],["Juan IV",43.5,16.4,"Teodoro I",31.7683,35.2137,"VII","VII",90,910],["Teodoro I",31.7683,35.2137,"San Mart��n I",42.78,12.41,"VII","VII",91,null],["San Mart��n I",42.78,12.41,"San Sergio I",36.2,36.16,"VII","VIII",92,null],["San Sergio I",36.2,36.16,"Juan VI",39.0742,21.8243,"VIII","VIII",93,940],["Juan VI",39.0742,21.8243,"Juan VII",39.5742,16.6344,"VIII","VIII",94,950],["Juan VII",39.5742,16.6344,"Sisinnio",34.8021,38.9968,"VIII","VIII",95,960],["Sisinnio",34.8021,38.9968,"Constantino",34.8021,38.9968,"VIII","VIII",96,970],["Constantino",34.8021,38.9968,"San Gregorio II",41.9,12.5,"VIII","VIII",97,980],["San Gregorio II",41.9,12.5,"San Gregorio III",34.8021,38.9968,"VIII","VIII",98,990],["San Gregorio III",34.8021,38.9968,"Zacar��as",38.905,16.5942,"VIII","VIII",99,null],["Zacar��as",38.905,16.5942,"Esteban II",41.9,12.5,"VIII","VIII",100,null],["Esteban II",41.9,12.5,"Pablo I",41.9,12.5,"VIII","VIII",101,1020],["Pablo I",41.9,12.5,"Esteban III",37.6,14.0154,"VIII","VIII",102,1030],["Esteban III",37.6,14.0154,"Adriano I",41.9,12.5,"VIII","VIII",103,1040],["Adriano I",41.9,12.5,"Le��n III",41.9,12.5,"VIII","VIII",104,null],["Le��n III",41.9,12.5,"Romano",42.35,12.43,"VIII","X",105,null],["Romano",42.35,12.43,"Teodoro II",41.9,12.5,"X","X",106,1070],["Teodoro II",41.9,12.5,"Juan IX",41.96,12.8,"X","X",107,1080],["Juan IX",41.96,12.8,"Benedicto IV",41.9,12.5,"X","X",108,1090],["Benedicto IV",41.9,12.5,"Le��n V",41.616,12.55,"X","X",109,null],["Le��n V",41.616,12.55,"Sergio III",41.9,12.5,"X","X",110,null],["Sergio III",41.9,12.5,"Anastasio III",41.9,12.5,"X","X",111,1120],["Anastasio III",41.9,12.5,"Land��n",42.35,12.75,"X","X",112,null],["Land��n",42.35,12.75,"Juan X",44.25,11.65,"X","X",113,null],["Juan X",44.25,11.65,"Le��n VI",41.9,12.5,"X","X",114,null],["Le��n VI",41.9,12.5,"Silvestre II",44.916,2.45,"X","XI",115,null],["Silvestre II",44.916,2.45,"Juan XVII",41.9,12.5,"XI","XI",116,1170],["Juan XVII",41.9,12.5,"Juan XVIII",41.9,12.5,"XI","XI",117,1180],["Juan XVIII",41.9,12.5,"Sergio IV",41.9,12.5,"XI","XI",118,1190],["Sergio IV",41.9,12.5,"Benedicto VIII",41.9,12.5,"XI","XI",119,1200],["Benedicto VIII",41.9,12.5,"Juan XIX",41.9,12.5,"XI","XI",120,1210],["Juan XIX",41.9,12.5,"Benedicto IX",41.9,12.5,"XI","XI",121,1220],["Benedicto IX",41.9,12.5,"Silvestre III",41.9,12.5,"XI","XI",122,1230],["Silvestre III",41.9,12.5,"Gregorio VI",41.9,12.5,"XI","XI",123,1240],["Gregorio VI",41.9,12.5,"Clemente II",51.9,11.3,"XI","XI",124,1250],["Clemente II",51.9,11.3,"Pascal II",42.283,12.05,"XI","XII",125,1260],["Pascal II",42.283,12.05,"Gelacio II",41.2128,13.5708,"XII","XII",126,1270],["Gelacio II",41.2128,13.5708,"Calixto II",47.15,5.883,"XII","XII",127,1280],["Calixto II",47.15,5.883,"Honorio II",44.6,11.4,"XII","XII",128,1290],["Honorio II",44.6,11.4,"Inocencio II",41.9,12.5,"XII","XII",129,1300],["Inocencio II",41.9,12.5,"Celestino II",43.465,12.238,"XII","XII",130,1310],["Celestino II",43.465,12.238,"Lucio II",44.4949,11.3426,"XII","XII",131,1320],["Lucio II",44.4949,11.3426,"Eugenio III",43.716,10.65,"XII","XII",132,1330],["Eugenio III",43.716,10.65,"Anastasio IV",41.9,12.5,"XII","XII",133,1340],["Anastasio IV",41.9,12.5,"Adriano IV",51.7,-0.4,"XII","XII",134,1350],["Adriano IV",51.7,-0.4,"Inocencio III",41.7167,13,"XII","XIII",135,1360],["Inocencio III",41.7167,13,"Honorio III",41.9,12.5,"XIII","XIII",136,1370],["Honorio III",41.9,12.5,"Gregorio IX",41.75,13.15,"XIII","XIII",137,1380],["Gregorio IX",41.75,13.15,"Celestino IV",45.4642,9.19,"XIII","XIII",138,1390],["Celestino IV",45.4642,9.19,"Inocencio IV",44.4056,8.9463,"XIII","XIII",139,1400],["Inocencio IV",44.4056,8.9463,"Alejandro IV",41.9,13,"XIII","XIII",140,1410],["Alejandro IV",41.9,13,"Urbano IV",48.3,4.083,"XIII","XIII",141,1420],["Urbano IV",48.3,4.083,"Clemente IV",43.683,4.433,"XIII","XIII",142,1430],["Clemente IV",43.683,4.433,"Gregorio X",45.05,9.7,"XIII","XIII",143,1440],["Gregorio X",45.05,9.7,"Inocencio V",48.5,4.3,"XIII","XIII",144,1450],["Inocencio V",48.5,4.3,"Bonifacio VIII",41.75,13.15,"XIII","XIV",145,1460],["Bonifacio VIII",41.75,13.15,"Benedicto XI",45.6667,12.25,"XIV","XIV",146,1470],["Benedicto XI",45.6667,12.25,"Clemente V",44.4667,-0.3,"XIV","XIV",147,1480],["Clemente V",44.4667,-0.3,"Juan XXII",44.45,1.433,"XIV","XIV",148,1490],["Juan XXII",44.45,1.433,"Benedicto XII",43.233,1.583,"XIV","XIV",149,1500],["Benedicto XII",43.233,1.583,"Clemente VI",45.4,1.55,"XIV","XIV",150,1510],["Clemente VI",45.4,1.55,"Inocencio VI",45.2,1.85,"XIV","XIV",151,1520],["Inocencio VI",45.2,1.85,"Urbano V",44.35,3.65,"XIV","XIV",152,1530],["Urbano V",44.35,3.65,"Gregorio XI",45.4,1.9,"XIV","XIV",153,1540],["Gregorio XI",45.4,1.9,"Urbano VI",40.85,14.27,"XIV","XIV",154,1550],["Urbano VI",40.85,14.27,"P��o VII",44.137,12.243,"XIV","XIX",155,null],["P��o VII",44.137,12.243,"Le��n XII",43.43,12.97,"XIX","XIX",null,null],["Le��n XII",43.43,12.97,"P��o VIII",43.38,13.2,"XIX","XIX",null,null],["P��o VIII",43.38,13.2,"Gregorio XVI",46.14,12.22,"XIX","XIX",158,null],["Gregorio XVI",46.14,12.22,"P��o IX",43.72,13.22,"XIX","XIX",159,null],["P��o IX",43.72,13.22,"Le��n XIII",41.65,13.13,"XIX","XIX",null,null],["Le��n XIII",41.65,13.13,"Bonifacio IX",40.85,14.27,"XIX","XV",161,null],["Bonifacio IX",40.85,14.27,"Inocencio VII",42.05,13.933,"XV","XV",162,1630],["Inocencio VII",42.05,13.933,"Gregorio XII",45.44,12.33,"XV","XV",163,1640],["Gregorio XII",45.44,12.33,"Mart��n V",41.83,12.97,"XV","XV",164,null],["Mart��n V",41.83,12.97,"Eugenio IV",45.44,12.33,"XV","XV",165,null],["Eugenio IV",45.44,12.33,"Nicol��s V",44.11,9.97,"XV","XV",166,null],["Nicol��s V",44.11,9.97,"Calixto III",38.99,-0.52,"XV","XV",167,null],["Calixto III",38.99,-0.52,"P��o II",43.08,11.68,"XV","XV",168,null],["P��o II",43.08,11.68,"Pablo II",45.44,12.33,"XV","XV",169,null],["Pablo II",45.44,12.33,"Sixto IV",44.3,8.48,"XV","XV",170,1710],["Sixto IV",44.3,8.48,"Alejandro VI",38.99,-0.52,"XV","XVI",171,1720],["Alejandro VI",38.99,-0.52,"P��o III",43.317,11.333,"XVI","XVI",172,null],["P��o III",43.317,11.333,"Julio II",44.3,8.5,"XVI","XVI",173,null],["Julio II",44.3,8.5,"Le��n X",43.77,11.25,"XVI","XVI",174,null],["Le��n X",43.77,11.25,"Adriano VI",52.09,5.12,"XVI","XVI",175,null],["Adriano VI",52.09,5.12,"Clemente VII",43.77,11.25,"XVI","XVI",176,1770],["Clemente VII",43.77,11.25,"Pablo III",42.43,11.75,"XVI","XVI",177,1780],["Pablo III",42.43,11.75,"Julio III",41.9,12.5,"XVI","XVI",178,1790],["Julio III",41.9,12.5,"Marcelo II",43.1,11.78,"XVI","XVI",179,1800],["Marcelo II",43.1,11.78,"Pablo IV",40.94,14.78,"XVI","XVI",180,1810],["Pablo IV",40.94,14.78,"Clemente VIII",43.84,13.02,"XVI","XVII",181,1820],["Clemente VIII",43.84,13.02,"Le��n XI",43.77,11.25,"XVII","XVII",182,null],["Le��n XI",43.77,11.25,"Pablo V",41.9,12.5,"XVII","XVII",183,null],["Pablo V",41.9,12.5,"Gregorio XV",44.5,11.34,"XVII","XVII",184,1850],["Gregorio XV",44.5,11.34,"Urbano VIII",43.77,11.25,"XVII","XVII",185,1860],["Urbano VIII",43.77,11.25,"Inocencio X",41.9,12.5,"XVII","XVII",186,1870],["Inocencio X",41.9,12.5,"Alejandro VII",43.32,11.33,"XVII","XVII",187,1880],["Alejandro VII",43.32,11.33,"Clemente IX",43.93,10.91,"XVII","XVII",188,1890],["Clemente IX",43.93,10.91,"Clemente X",41.9,12.5,"XVII","XVII",189,1900],["Clemente X",41.9,12.5,"Inocencio XI",45.81,9.08,"XVII","XVII",190,1910],["Inocencio XI",45.81,9.08,"Inocencio XII",40.9833,16.0833,"XVII","XVIII",191,1920],["Inocencio XII",40.9833,16.0833,"Clemente XI",43.725,12.637,"XVIII","XVIII",192,1930],["Clemente XI",43.725,12.637,"Inocencio XIII",41.917,12.85,"XVIII","XVIII",193,1940],["Inocencio XIII",41.917,12.85,"Benedicto XIII",40.8167,16.4167,"XVIII","XVIII",194,1950],["Benedicto XIII",40.8167,16.4167,"Clemente XII",43.77,11.25,"XVIII","XVIII",195,1960],["Clemente XII",43.77,11.25,"Benedicto XIV",44.5,11.34,"XVIII","XVIII",196,1970],["Benedicto XIV",44.5,11.34,"Clemente XIII",45.44,12.33,"XVIII","XVIII",197,1980],["Clemente XIII",45.44,12.33,"Clemente XIV",44.057,12.454,"XVIII","XVIII",198,1990],["Clemente XIV",44.057,12.454,"P��o VI",44.137,12.243,"XVIII","XVIII",199,null],["P��o VI",44.137,12.243,"P��o X",45.7,11.9,"XVIII","XX",null,null],["P��o X",45.7,11.9,"Benedicto XV",44.4056,8.9463,"XX","XX",201,null],["Benedicto XV",44.4056,8.9463,"P��o XI",45.6167,9.2,"XX","XX",202,null],["P��o XI",45.6167,9.2,"P��o XII",41.9,12.5,"XX","XX",null,null],["P��o XII",41.9,12.5,"Juan XXIII",45.7,9.5,"XX","XX",204,null],["Juan XXIII",45.7,9.5,"Pablo VI",45.6,10.25,"XX","XX",205,2060],["Pablo VI",45.6,10.25,"Juan Pablo I",46.33,12,"XX","XX",206,2070],["Juan Pablo I",46.33,12,"Juan Pablo II",49.883,19.5,"XX","XX",207,2080],["Juan Pablo II",49.883,19.5,"Juan Pablo II",49.883,19.5,"XX","XXI",208,2090],["Juan Pablo II",49.883,19.5,"Benedicto XVI",48.26,12.85,"XXI","XXI",209,2100],["Benedicto XVI",48.26,12.85,"Francisco",-34.6037,-58.3816,"XXI","XXI",210,2110],["León XIV",-34.6037,-58.3816,"Francisco",45,-100,"XXI","XXI",211,212]],"fields":[{"name":"Nombre Origen","type":"string","format":"","analyzerType":"STRING"},{"name":"Lat1","type":"real","format":"","analyzerType":"FLOAT"},{"name":"Lon1","type":"real","format":"","analyzerType":"FLOAT"},{"name":"Nombre Destino","type":"string","format":"","analyzerType":"STRING"},{"name":"Lat2","type":"real","format":"","analyzerType":"FLOAT"},{"name":"Lon2","type":"real","format":"","analyzerType":"FLOAT"},{"name":"Siglo Origen","type":"string","format":"","analyzerType":"STRING"},{"name":"Siglo Destino","type":"string","format":"","analyzerType":"STRING"},{"name":"Orden","type":"integer","format":"","analyzerType":"INT"},{"name":"A�","type":"integer","format":"","analyzerType":"INT"}],"type":"","metadata":{"id":"-2drntl","format":"row","label":"Conexiones_Papas_Animado.csv"},"disableDataOperation":false}}];
+            const config = {"version":"v1","config":{"visState":{"filters":[],"layers":[{"id":"hl8ej2b","type":"line","config":{"dataId":"-2drntl","columnMode":"points","label":"new layer","color":[130,154,227],"highlightColor":[252,242,26,255],"columns":{"lat0":"Lat1","lng0":"Lon1","lat1":"Lat2","lng1":"Lon2"},"isVisible":true,"visConfig":{"opacity":0.8,"thickness":2,"colorRange":{"name":"color.customPalette.customOrdinal.Siglo Origen","type":"customOrdinal","category":"Custom","colors":["#4C0035","#880030","#B72F15","#D6610A","#D6980A","#D6B50A","#BED60A","#69D60A","#0AD67A","#0A822E","#055B0A","#1CD6FE","#0A9DD6","#0A5DD6","#0A39D6","#8688C2","#885AF2","#4C1A6D","#BA60DE","#DD08E0","#941469"],"colorMap":[["I","#4C0035"],["II","#880030"],["III","#B72F15"],["IV","#D6610A"],[["V"],"#D6980A"],[["VI"],"#D6B50A"],[["VII"],"#BED60A"],[["VIII"],"#69D60A"],[["IX"],"#0AD67A"],[["X"],"#0A822E"],[["XI"],"#055B0A"],[["XII"],"#1CD6FE"],[["XIII"],"#0A9DD6"],[["XIV"],"#0A5DD6"],[["XV"],"#0A39D6"],[["XVI"],"#8688C2"],[["XVII"],"#885AF2"],[["XVIII"],"#4C1A6D"],[["XIX"],"#BA60DE"],[["XX"],"#DD08E0"],[["XXI"],"#941469"]]},"sizeRange":[0,10],"targetColor":null,"elevationScale":1},"hidden":false,"textLabel":[{"field":null,"color":[255,255,255],"size":18,"offset":[0,0],"anchor":"start","alignment":"center","outlineWidth":0,"outlineColor":[255,0,0,255],"background":false,"backgroundColor":[0,0,200,255]}]},"visualChannels":{"colorField":{"name":"Siglo Origen","type":"string"},"colorScale":"customOrdinal","sizeField":null,"sizeScale":"linear"}}],"effects":[],"interactionConfig":{"tooltip":{"fieldsToShow":{"-2drntl":[{"name":"Nombre Origen","format":null},{"name":"Lat1","format":null},{"name":"Lon1","format":null},{"name":"Nombre Destino","format":null},{"name":"Lat2","format":null}]},"compareMode":false,"compareType":"absolute","enabled":true},"brush":{"size":0.5,"enabled":false},"geocoder":{"enabled":false},"coordinate":{"enabled":false}},"layerBlending":"normal","overlayBlending":"normal","splitMaps":[],"animationConfig":{"currentTime":null,"speed":1},"editor":{"features":[],"visible":true}},"mapState":{"bearing":0,"dragRotate":false,"latitude":21.769047440981087,"longitude":-23.118786983539994,"pitch":0,"zoom":2,"isSplit":false,"isViewportSynced":true,"isZoomLocked":false,"splitMapViewports":[]},"mapStyle":{"styleType":"dark-matter","topLayerGroups":{},"visibleLayerGroups":{"label":true,"road":true,"border":false,"building":true,"water":true,"land":true,"3d building":false},"threeDBuildingColor":[15.035172933000911,15.035172933000911,15.035172933000911],"backgroundColor":[0,0,0],"mapStyles":{}},"uiState":{"mapControls":{"mapLegend":{"active":false}}}}};
+
+            const loadedData = keplerGl.KeplerGlSchema.load(
+              datasets,
+              config
+            );
+
+            // For some reason Kepler overwrites the config without extra wait time
+            window.setTimeout(() => {
+              store.dispatch(
+                keplerGl.addDataToMap({
+                  datasets: loadedData.datasets,
+                  config: loadedData.config,
+                  options: {
+                    centerMap: false,
+                  },
+                })
+              );
+            }, 500);
+          }(KeplerGl, store))
+        </script>
+      </body>
+    </html>
+  
